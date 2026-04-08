@@ -1,0 +1,121 @@
+name: dataclean-openenv
+version: "1.0.0"
+description: "Real-world data cleaning environment for RL agents. Agent learns to fix format errors, impute missing values, remove duplicates, and flag anomalies in enterprise datasets."
+
+author:
+  name: "OpenEnv Hackathon Team"
+  email: ""
+
+repository: ""
+
+tasks:
+  - name: "format_fix"
+    description: "Fix date (-> YYYY-MM-DD) and salary (-> integers) format errors"
+    difficulty: "easy"
+    episode_max_steps: 10
+    observation_space:
+      type: "object"
+      properties:
+        task_name: { type: "string" }
+        step: { type: "integer", minimum: 0 }
+        current_data: { type: "array", items: { type: "object" } }
+        errors_remaining: { type: "integer", minimum: 0 }
+        last_action_result: { type: ["string", "null"] }
+        hint: { type: "string" }
+    action_space:
+      type: "object"
+      properties:
+        operation: { type: "string", enum: ["fix_format", "done"] }
+        target_rows: { type: "array", items: { type: "integer" } }
+        target_column: { type: "string" }
+        new_value: { type: ["string", "null"] }
+        reason: { type: ["string", "null"] }
+    reward_description: "+1.0 for fixing an error, -0.5 for false positive, 0.0 for no-op"
+
+  - name: "imputation"
+    description: "Fill missing values using department-level group means"
+    difficulty: "medium"
+    episode_max_steps: 10
+    observation_space:
+      type: "object"
+      properties:
+        task_name: { type: "string" }
+        step: { type: "integer", minimum: 0 }
+        current_data: { type: "array", items: { type: "object" } }
+        errors_remaining: { type: "integer", minimum: 0 }
+        last_action_result: { type: ["string", "null"] }
+        hint: { type: "string" }
+    action_space:
+      type: "object"
+      properties:
+        operation: { type: "string", enum: ["impute", "done"] }
+        target_rows: { type: "array", items: { type: "integer" } }
+        target_column: { type: "string" }
+        new_value: { type: ["string", "null"] }
+        reason: { type: ["string", "null"] }
+    reward_description: "+1.0 for correctly imputing, -0.5 for false positive, 0.0 for no-op"
+
+  - name: "pipeline"
+    description: "Multi-step cleaning with enforced order: format -> impute -> dedup -> flag anomalies"
+    difficulty: "hard"
+    episode_max_steps: 10
+    observation_space:
+      type: "object"
+      properties:
+        task_name: { type: "string" }
+        step: { type: "integer", minimum: 0 }
+        current_data: { type: "array", items: { type: "object" } }
+        errors_remaining: { type: "integer", minimum: 0 }
+        last_action_result: { type: ["string", "null"] }
+        hint: { type: "string" }
+    action_space:
+      type: "object"
+      properties:
+        operation: { type: "string", enum: ["fix_format", "impute", "remove_duplicate", "flag_anomaly", "done"] }
+        target_rows: { type: "array", items: { type: "integer" } }
+        target_column: { type: "string" }
+        new_value: { type: ["string", "null"] }
+        reason: { type: ["string", "null"] }
+    reward_description: "+1.0 per correct action in order, -0.5 for violations or false positives, 0.0 for no-op"
+
+environment:
+  name: "DataCleanEnv"
+  module: "environment"
+  class: "DataCleanEnv"
+  
+  constructor_args:
+    - name: "task_name"
+      type: "string"
+      required: true
+      description: "One of: format_fix, imputation, pipeline"
+
+api:
+  reset:
+    description: "Initialize environment for a new episode"
+    returns: "Observation"
+  
+  step:
+    description: "Execute action in environment"
+    args:
+      - name: "action"
+        type: "Action"
+        required: true
+    returns:
+      - "Observation"
+      - "float"
+      - "bool"
+      - "dict"
+  
+  state:
+    description: "Get current environment state"
+    returns: "dict"
+  
+  close:
+    description: "Cleanup environment resources"
+
+metadata:
+  tags: ["data-cleaning", "real-world", "rl", "enterprise"]
+  domain: "Data Quality / ETL"
+  difficulty_range: "easy-hard"
+  benchmark_name: "dataclean-openenv"
+  estimated_runtime_seconds: 120
